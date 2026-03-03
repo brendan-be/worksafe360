@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, AlertTriangle, ShieldCheck, MapPin, ChevronRight, FileText, UserPlus, TrendingUp, Heart, UserCheck, Bot } from 'lucide-react'
+import { Users, AlertTriangle, ShieldCheck, MapPin, ChevronRight, FileText, UserPlus, TrendingUp, Heart, UserCheck, Bot, Download } from 'lucide-react'
 import { dashboardStats, pendingActions, certifications, incidents, sites, onboardingTasks } from '../data/mockData'
 import QuickAddStaffModal from '../components/QuickAddStaffModal'
 
@@ -24,6 +24,53 @@ export default function Dashboard() {
     const [showAdd, setShowAdd] = useState(false)
     const nav = useNavigate()
 
+    const exportReport = () => {
+        const today = new Date().toISOString().slice(0, 10)
+        const rows: string[][] = [
+            ['Better Eggs HRIS — Dashboard Report'],
+            [`Generated: ${today}`],
+            [],
+            ['OVERVIEW'],
+            ['Metric', 'Value'],
+            ['Total Employees', String(dashboardStats.totalEmployees)],
+            ['Active On Site', String(dashboardStats.activeOnSite)],
+            ['Open Incidents', String(dashboardStats.openIncidents)],
+            ['Expiring Certifications', String(dashboardStats.expiringCerts)],
+            ['Pending Contracts', String(dashboardStats.pendingContracts)],
+            ['Onboarding In Progress', String(dashboardStats.onboardingInProgress)],
+            ['Sites Active', String(dashboardStats.sitesActive)],
+            ['Compliance Rate', `${dashboardStats.complianceRate}%`],
+            ['Learning Completion', `${dashboardStats.learningCompletion}%`],
+            ['Pending Signatures', String(dashboardStats.pendingSignatures)],
+            ['Improvement Notes', String(dashboardStats.improvementNotes)],
+            ['Recognitions This Month', String(dashboardStats.recognitionsThisMonth)],
+            [],
+            ['PENDING ACTIONS'],
+            ['Title', 'Priority', 'Due Date', 'Description'],
+            ...pendingActions.map(a => [a.title, a.priority, a.dueDate, a.description]),
+            [],
+            ['EXPIRING / EXPIRED CERTIFICATIONS'],
+            ['Employee', 'Certification', 'Status', 'Days Remaining'],
+            ...certifications.filter(c => c.status !== 'valid').map(c => [c.employeeName, c.type, c.status, String(c.daysRemaining)]),
+            [],
+            ['RECENT INCIDENTS'],
+            ['Title', 'Site', 'Severity', 'Status', 'Reported Date'],
+            ...incidents.map(i => [i.title, i.site, i.severity, i.status, i.reportedDate]),
+            [],
+            ['SITE OCCUPANCY'],
+            ['Site', 'Current', 'Max Capacity', 'Utilisation'],
+            ...sites.map(s => [s.name, String(s.currentOccupancy), String(s.maxCapacity), `${Math.round((s.currentOccupancy / s.maxCapacity) * 100)}%`]),
+        ]
+        const csv = rows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(',')).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `better-eggs-report-${today}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+    }
+
     return (
         <>
             <QuickAddStaffModal open={showAdd} onClose={() => setShowAdd(false)} />
@@ -36,7 +83,7 @@ export default function Dashboard() {
                         <p style={{ fontSize: 15, color: '#64748B', marginTop: 8 }}>Here's what requires your attention today.</p>
                     </div>
                     <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-                        <button className="btn btn-outline">Export Report</button>
+                        <button onClick={exportReport} className="btn btn-outline"><Download style={{ width: 16, height: 16 }} />Export Report</button>
                         <button className="btn btn-amber" onClick={() => setShowAdd(true)}>
                             <UserPlus style={{ width: 16, height: 16 }} />Quick Add Staff
                         </button>

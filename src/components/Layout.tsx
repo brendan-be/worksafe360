@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, FileText, ShieldAlert, MapPin, ClipboardList, ClipboardCheck, BookOpen, Egg, Bell, ChevronLeft, ChevronDown, Settings, LogOut, User, X } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, ShieldAlert, MapPin, ClipboardList, ClipboardCheck, BookOpen, Megaphone, DollarSign, Shield, Egg, Bell, ChevronLeft, ChevronDown, Settings, LogOut, User, X, Clock } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
 const nav = [
@@ -10,7 +10,10 @@ const nav = [
     { name: 'Learning', href: '/learning', icon: BookOpen },
     { name: 'Checklists', href: '/checklists', icon: ClipboardCheck },
     { name: 'Health & Safety', href: '/health-safety', icon: ShieldAlert },
-    { name: 'Site Sign-In', href: '/site-sign-in', icon: MapPin },
+    { name: 'Communications', href: '/communications', icon: Megaphone },
+    { name: 'Time & Attendance', href: '/site-sign-in', icon: Clock },
+    { name: 'Budgets', href: '/budgets', icon: DollarSign },
+    { name: 'Audit', href: '/audit', icon: Shield },
 ]
 
 const notifications = [

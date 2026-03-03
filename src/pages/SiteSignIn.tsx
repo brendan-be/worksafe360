@@ -1,123 +1,167 @@
 import { useState } from 'react'
-import { MapPin, QrCode, Monitor, Smartphone, CreditCard, Siren, CheckCircle2, X, LogIn, LogOut } from 'lucide-react'
-import { sites, signInLog } from '../data/mockData'
+import {
+    Clock, MapPin, User, Search, AlertTriangle, CheckCircle2,
+    Smartphone, Tablet, Globe, Plus, Monitor, CreditCard,
+} from 'lucide-react'
+import { timeEntries, signInLog, type TimeEntry, type SiteSignIn } from '../data/mockData'
 
-export default function SiteSignIn() {
-    const [selSite, setSelSite] = useState<string | null>(null)
-    const [muster, setMuster] = useState(false)
-    const [checked, setChecked] = useState<string[]>([])
-    const onSite = signInLog.filter(s => !s.signOutTime)
-    const out = signInLog.filter(s => s.signOutTime)
-    const toggle = (id: string) => setChecked(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])
+/* ─── Config ─── */
+const methodCfg: Record<TimeEntry['method'], { icon: any; label: string; bg: string; tx: string }> = {
+    tablet: { icon: Tablet, label: 'Tablet', bg: '#EFF6FF', tx: '#2563EB' },
+    phone: { icon: Smartphone, label: 'Phone', bg: '#F0FDF4', tx: '#059669' },
+    geo: { icon: Globe, label: 'Geo', bg: '#FDF4FF', tx: '#9333EA' },
+}
 
-    const methods = [
-        { icon: QrCode, name: 'QR Code', desc: 'Scan with phone camera' },
-        { icon: Monitor, name: 'Kiosk', desc: 'Tablet at site entrance' },
-        { icon: CreditCard, name: 'RFID Card', desc: 'Tap card at reader' },
-        { icon: Smartphone, name: 'Mobile', desc: 'Geofenced auto check-in' },
-    ]
-    const mIcn: Record<string, any> = { QR: QrCode, Kiosk: Monitor, RFID: CreditCard, Mobile: Smartphone }
+const signMethodCfg: Record<SiteSignIn['method'], { icon: any; bg: string; tx: string }> = {
+    QR: { icon: Monitor, bg: '#EFF6FF', tx: '#2563EB' },
+    Kiosk: { icon: Tablet, bg: '#FFFBEB', tx: '#D97706' },
+    RFID: { icon: CreditCard, bg: '#F0FDF4', tx: '#059669' },
+    Mobile: { icon: Smartphone, bg: '#FDF4FF', tx: '#9333EA' },
+}
+
+type TabView = 'timesheets' | 'site-log'
+
+export default function TimeAttendance() {
+    const [tab, setTab] = useState<TabView>('timesheets')
+    const [search, setSearch] = useState('')
+
+    const totalHrs = timeEntries.reduce((s, t) => s + t.actual, 0)
+    const exceptions = timeEntries.filter(t => t.exception).length
+    const onSite = signInLog.filter(s => !s.signOutTime).length
+
+    const filteredTime = timeEntries.filter(t => {
+        if (!search) return true
+        const q = search.toLowerCase()
+        return t.employeeName.toLowerCase().includes(q) || t.site.toLowerCase().includes(q)
+    })
+
+    const filteredSign = signInLog.filter(s => {
+        if (!search) return true
+        const q = search.toLowerCase()
+        return s.name.toLowerCase().includes(q) || s.site.toLowerCase().includes(q)
+    })
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 48, maxWidth: 1400 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32, maxWidth: 1400 }}>
+            {/* Header */}
             <div className="animate-in" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p style={{ fontSize: 15, color: '#64748B' }}>Real-time site occupancy across all locations</p>
-                <button onClick={() => setMuster(!muster)} className={muster ? 'btn btn-danger' : 'btn btn-outline'} style={!muster ? { borderColor: '#FCA5A5', color: '#DC2626' } : {}}>
-                    <Siren style={{ width: 16, height: 16 }} />{muster ? 'End Muster' : 'Emergency Muster'}
-                </button>
+                <p style={{ fontSize: 15, color: '#64748B' }}>{timeEntries.length} time entries · {signInLog.length} site log entries</p>
             </div>
 
-            <div className="animate-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-                {sites.map(site => {
-                    const pct = Math.round((site.currentOccupancy / site.maxCapacity) * 100)
-                    const sel = selSite === site.id
+            {/* Summary */}
+            <div className="animate-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                {[
+                    { label: 'Total Hours Today', value: totalHrs.toFixed(1), icon: Clock, bg: '#EFF6FF', tx: '#2563EB' },
+                    { label: 'Exceptions', value: exceptions, icon: AlertTriangle, bg: '#FFFBEB', tx: '#D97706' },
+                    { label: 'Currently On-Site', value: onSite, icon: MapPin, bg: '#F0FDF4', tx: '#059669' },
+                    { label: 'Time Entries', value: timeEntries.length, icon: User, bg: '#F1F5F9', tx: '#475569' },
+                ].map(c => {
+                    const CI = c.icon
                     return (
-                        <button key={site.id} onClick={() => setSelSite(sel ? null : site.id)}
-                            style={{ textAlign: 'left' as any, padding: 32, borderRadius: 28, border: sel ? '2px solid #FCD34D' : '2px solid #F1F5F9', background: sel ? '#FFFBEB' : 'white', cursor: 'pointer', transition: 'all 0.2s' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
-                                <div style={{ width: 48, height: 48, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: sel ? '#FEF3C7' : '#F1F5F9', color: sel ? '#D97706' : '#94A3B8' }}><MapPin style={{ width: 20, height: 20 }} /></div>
-                                <div>
-                                    <p style={{ fontSize: 16, fontWeight: 700, color: sel ? '#B45309' : '#1E293B' }}>{site.name}</p>
-                                    <p style={{ fontSize: 14, color: '#64748B', marginTop: 4 }}>{site.address}</p>
-                                </div>
+                        <div key={c.label} className="card" style={{ padding: 24, display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <div style={{ width: 48, height: 48, borderRadius: 16, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <CI style={{ width: 22, height: 22, color: c.tx }} />
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#64748B' }}><span className="animate-pulse" style={{ width: 8, height: 8, borderRadius: 4, background: '#10B981' }} /><span style={{ fontWeight: 700, color: '#1E293B' }}>{site.currentOccupancy}</span> on site</span>
-                                <span style={{ fontSize: 13, color: '#94A3B8' }}>of {site.maxCapacity}</span>
+                            <div>
+                                <p style={{ fontSize: 24, fontWeight: 700, color: '#0F172A' }}>{c.value}</p>
+                                <p style={{ fontSize: 12, fontWeight: 500, color: '#64748B' }}>{c.label}</p>
                             </div>
-                            <div style={{ width: '100%', height: 10, background: '#F1F5F9', borderRadius: 5, overflow: 'hidden' }}>
-                                <div style={{ width: `${pct}%`, height: '100%', borderRadius: 5, background: pct > 80 ? '#EF4444' : pct > 50 ? '#F97316' : '#FBBF24', transition: 'width 0.7s' }} />
-                            </div>
-                        </button>
+                        </div>
                     )
                 })}
             </div>
 
-            {muster && (
-                <div className="card animate-in" style={{ padding: 36, border: '2px solid #FCA5A5' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                        <h3 style={{ fontSize: 18, fontWeight: 700, color: '#B91C1C', display: 'flex', alignItems: 'center', gap: 10 }}><Siren style={{ width: 20, height: 20 }} />🚨 Emergency Muster — Roll Call</h3>
-                        <span style={{ fontSize: 16, color: '#64748B' }}><span style={{ color: '#059669', fontWeight: 700 }}>{checked.length}</span> / {onSite.length} accounted</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-                        {onSite.map(p => {
-                            const chk = checked.includes(p.id); return (
-                                <button key={p.id} onClick={() => toggle(p.id)} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20, borderRadius: 20, border: chk ? '2px solid #6EE7B7' : '2px solid #FECACA', background: chk ? '#ECFDF5' : '#FEF2F2', cursor: 'pointer', transition: 'all 0.2s' }}>
-                                    <div style={{ width: 40, height: 40, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: chk ? '#10B981' : '#FCA5A5', color: chk ? 'white' : '#DC2626' }}>{chk ? <CheckCircle2 style={{ width: 20, height: 20 }} /> : <X style={{ width: 20, height: 20 }} />}</div>
-                                    <div style={{ textAlign: 'left' as any }}><p style={{ fontSize: 14, fontWeight: 600, color: chk ? '#047857' : '#B91C1C' }}>{p.name}</p><p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>{p.site}</p></div>
-                                </button>
-                            )
-                        })}
-                    </div>
+            {/* Tabs */}
+            <div className="animate-in" style={{ display: 'flex', gap: 4, background: 'white', borderRadius: 16, padding: 4, boxShadow: '0 1px 3px rgba(15,23,42,0.04)', width: 'fit-content' }}>
+                {([{ key: 'timesheets' as TabView, label: `Timesheets (${timeEntries.length})` }, { key: 'site-log' as TabView, label: `Site Log (${signInLog.length})` }]).map(t => (
+                    <button key={t.key} onClick={() => { setTab(t.key); setSearch('') }}
+                        style={{ padding: '10px 24px', borderRadius: 12, border: 'none', fontSize: 13, fontWeight: tab === t.key ? 600 : 500, cursor: 'pointer', background: tab === t.key ? '#FFFBEB' : 'transparent', color: tab === t.key ? '#B45309' : '#64748B', transition: 'all 0.2s' }}>
+                        {t.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Search */}
+            <div className="animate-in" style={{ position: 'relative' }}>
+                <Search style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#94A3B8' }} />
+                <input type="text" placeholder={`Search ${tab === 'timesheets' ? 'timesheets' : 'site log'}...`} className="input" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 44 }} />
+            </div>
+
+            {/* ─── TIMESHEETS ─── */}
+            {tab === 'timesheets' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {filteredTime.map((te, i) => {
+                        const mc = methodCfg[te.method]
+                        const MIcon = mc.icon
+                        const variance = te.actual - te.contracted
+                        return (
+                            <div key={te.id} className={`card animate-in delay-${Math.min(i + 1, 4)}`} style={{ padding: '24px 28px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                    <div style={{ width: 44, height: 44, borderRadius: 14, background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14, fontWeight: 700, color: '#64748B' }}>
+                                        {te.employeeName.split(' ').map(n => n[0]).join('')}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ fontSize: 15, fontWeight: 600, color: '#1E293B' }}>{te.employeeName}</p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 4 }}>
+                                            <span style={{ fontSize: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4 }}><MapPin style={{ width: 11, height: 11 }} />{te.site}</span>
+                                            <span style={{ fontSize: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4 }}><Clock style={{ width: 11, height: 11 }} />{te.clockIn} – {te.clockOut || 'on site'}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Hours */}
+                                    <div style={{ textAlign: 'right', marginRight: 12 }}>
+                                        <p style={{ fontSize: 18, fontWeight: 700, color: '#0F172A' }}>{te.actual}h</p>
+                                        <p style={{ fontSize: 11, color: variance > 0 ? '#DC2626' : '#059669' }}>
+                                            {variance > 0 ? '+' : ''}{variance.toFixed(1)}h vs contracted
+                                        </p>
+                                    </div>
+
+                                    {/* Method */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 10, background: mc.bg }}>
+                                        <MIcon style={{ width: 12, height: 12, color: mc.tx }} />
+                                        <span style={{ fontSize: 11, fontWeight: 600, color: mc.tx }}>{mc.label}</span>
+                                    </div>
+
+                                    {te.exception && (
+                                        <span style={{ padding: '4px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#FFFBEB', color: '#D97706' }}>{te.exception}</span>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 32 }}>
-                <div className="card animate-in" style={{ padding: 36 }}>
-                    <h3 style={{ fontSize: 17, fontWeight: 700, color: '#0F172A', marginBottom: 28 }}>Sign-In Methods</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        {methods.map(m => {
-                            const I = m.icon; return (
-                                <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20, borderRadius: 20, background: '#F8FAFC', border: '1px solid #F1F5F9' }}>
-                                    <div style={{ width: 44, height: 44, borderRadius: 14, background: '#FFFBEB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706' }}><I style={{ width: 20, height: 20 }} /></div>
-                                    <div><p style={{ fontSize: 15, fontWeight: 600, color: '#1E293B' }}>{m.name}</p><p style={{ fontSize: 14, color: '#64748B', marginTop: 4 }}>{m.desc}</p></div>
+            {/* ─── SITE LOG ─── */}
+            {tab === 'site-log' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {filteredSign.map((si, i) => {
+                        const sm = signMethodCfg[si.method]
+                        const SMIcon = sm.icon
+                        const isOnSite = !si.signOutTime
+                        return (
+                            <div key={si.id} className={`card animate-in delay-${Math.min(i + 1, 4)}`} style={{ padding: '20px 28px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: isOnSite ? '#10B981' : '#CBD5E1', boxShadow: isOnSite ? '0 0 0 3px rgba(16,185,129,0.2)' : 'none', flexShrink: 0 }} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B' }}>{si.name}</p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                                            <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: si.type === 'employee' ? '#EFF6FF' : si.type === 'contractor' ? '#FFFBEB' : '#FDF4FF', color: si.type === 'employee' ? '#2563EB' : si.type === 'contractor' ? '#D97706' : '#9333EA', textTransform: 'capitalize' }}>{si.type}</span>
+                                            <span style={{ fontSize: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4 }}><MapPin style={{ width: 11, height: 11 }} />{si.site}</span>
+                                            <span style={{ fontSize: 12, color: '#94A3B8' }}>In: {si.signInTime}{si.signOutTime ? ` · Out: ${si.signOutTime}` : ''}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 10, background: sm.bg }}>
+                                        <SMIcon style={{ width: 12, height: 12, color: sm.tx }} />
+                                        <span style={{ fontSize: 11, fontWeight: 600, color: sm.tx }}>{si.method}</span>
+                                    </div>
+                                    <span style={{ padding: '4px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: isOnSite ? '#ECFDF5' : '#F1F5F9', color: isOnSite ? '#059669' : '#64748B' }}>{isOnSite ? 'On-Site' : 'Signed Out'}</span>
                                 </div>
-                            )
-                        })}
-                    </div>
-                </div>
-
-                <div className="card animate-in" style={{ padding: 36 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
-                        <h3 style={{ fontSize: 17, fontWeight: 700, color: '#0F172A' }}>Today's Log</h3>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#059669', fontWeight: 600 }}><span className="animate-pulse" style={{ width: 8, height: 8, borderRadius: 4, background: '#10B981' }} />Live</span>
-                    </div>
-                    <p style={{ fontSize: 11, color: '#94A3B8', textTransform: 'uppercase' as any, letterSpacing: '0.1em', fontWeight: 700, marginBottom: 16 }}>On Site</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginBottom: 40 }}>
-                        {onSite.map((e, i) => {
-                            const MI = mIcn[e.method]; return (
-                                <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 0', borderBottom: i < onSite.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
-                                    <LogIn style={{ width: 16, height: 16, color: '#10B981' }} />
-                                    <p style={{ flex: 1, fontSize: 15, fontWeight: 600, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as any }}>{e.name}</p>
-                                    <span style={{ padding: '4px 14px', borderRadius: 14, fontSize: 11, fontWeight: 700, textTransform: 'capitalize' as any, background: '#FFFBEB', color: '#D97706' }}>{e.type}</span>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#94A3B8' }}><MI style={{ width: 14, height: 14 }} />{e.method}</span>
-                                    <span style={{ fontSize: 14, color: '#64748B', fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums' }}>{e.signInTime}</span>
-                                </div>
-                            )
-                        })}
-                    </div>
-                    <p style={{ fontSize: 11, color: '#94A3B8', textTransform: 'uppercase' as any, letterSpacing: '0.1em', fontWeight: 700, marginBottom: 16 }}>Signed Out</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, opacity: 0.4 }}>
-                        {out.map((e, i) => (
-                            <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 0', borderBottom: i < out.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
-                                <LogOut style={{ width: 16, height: 16, color: '#94A3B8' }} />
-                                <p style={{ flex: 1, fontSize: 15, color: '#64748B' }}>{e.name}</p>
-                                <span style={{ fontSize: 14, color: '#94A3B8', fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums' }}>{e.signInTime}–{e.signOutTime}</span>
                             </div>
-                        ))}
-                    </div>
+                        )
+                    })}
                 </div>
-            </div>
+            )}
         </div>
     )
 }

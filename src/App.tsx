@@ -9,7 +9,10 @@ import Documents from './pages/Documents'
 import Learning from './pages/Learning'
 import Checklists from './pages/Checklists'
 import HealthSafety from './pages/HealthSafety'
+import Communications from './pages/Communications'
 import SiteSignIn from './pages/SiteSignIn'
+import Budgets from './pages/Budgets'
+import AuditPage from './pages/AuditPage'
 import CandidatePortal from './pages/CandidatePortal'
 
 export default function App() {
@@ -26,7 +29,10 @@ export default function App() {
                     <Route path="/learning" element={<Learning />} />
                     <Route path="/checklists" element={<Checklists />} />
                     <Route path="/health-safety" element={<HealthSafety />} />
+                    <Route path="/communications" element={<Communications />} />
                     <Route path="/site-sign-in" element={<SiteSignIn />} />
+                    <Route path="/budgets" element={<Budgets />} />
+                    <Route path="/audit" element={<AuditPage />} />
                 </Route>
 
                 {/* Candidate portal (standalone — no sidebar) */}

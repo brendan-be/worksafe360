@@ -21,17 +21,21 @@ const statusCfg: Record<Incident['status'], { icon: any; bg: string; tx: string;
     resolved: { icon: CheckCircle2, bg: '#F0FDF4', tx: '#16A34A', label: 'Resolved' },
 }
 
-const noteCatCfg: Record<ImprovementNote['category'], { icon: any; bg: string; tx: string; label: string }> = {
+const noteCatCfg: Record<string, { icon: any; bg: string; tx: string; label: string }> = {
     safety: { icon: ShieldAlert, bg: '#FEF2F2', tx: '#DC2626', label: 'Safety' },
     health: { icon: Heart, bg: '#FDF4FF', tx: '#9333EA', label: 'Health' },
     infrastructure: { icon: Wrench, bg: '#EFF6FF', tx: '#2563EB', label: 'Infrastructure' },
     process: { icon: Activity, bg: '#F0FDF4', tx: '#059669', label: 'Process' },
+    environment: { icon: Lightbulb, bg: '#F0FDF4', tx: '#059669', label: 'Environment' },
+    quality: { icon: AlertCircle, bg: '#FDF4FF', tx: '#9333EA', label: 'Quality' },
+    other: { icon: Lightbulb, bg: '#F1F5F9', tx: '#64748B', label: 'Other' },
 }
 
-const noteStatusCfg: Record<ImprovementNote['status'], { bg: string; tx: string; label: string }> = {
+const noteStatusCfg: Record<string, { bg: string; tx: string; label: string }> = {
     submitted: { bg: '#F1F5F9', tx: '#64748B', label: 'Submitted' },
     acknowledged: { bg: '#FFFBEB', tx: '#D97706', label: 'Acknowledged' },
     actioned: { bg: '#F0FDF4', tx: '#059669', label: 'Actioned' },
+    closed: { bg: '#F1F5F9', tx: '#475569', label: 'Closed' },
 }
 
 const siteOptions = ['Forest Farm', 'Lichfield Farm', 'Masterton Farm', 'Main Office (Lichfield)', 'Sunny Bay Farm']

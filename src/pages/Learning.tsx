@@ -2,12 +2,13 @@ import { useState } from 'react'
 import {
     Search, Play, FileText, Zap, BookOpen, CheckCircle2, Circle,
     Clock, Shield, Star, ChevronDown, ChevronUp, X, Award,
-    AlertTriangle, RotateCw,
+    AlertTriangle, RotateCw, Plus,
 } from 'lucide-react'
 import {
     learningContent, quizzes as seedQuizzes,
     type LearningContent, type Quiz, type QuizQuestion,
 } from '../data/mockData'
+import { useStaff } from '../context/StaffContext'
 
 /* ─── Type config ─── */
 const typeCfg: Record<LearningContent['type'], { icon: any; bg: string; tx: string; label: string }> = {
@@ -176,12 +177,14 @@ function QuizModal({ quiz: initQuiz, onClose }: { quiz: Quiz; onClose: (q: Quiz)
 
 /* ═══ Main Page ═══ */
 export default function Learning() {
+    const { addLearningItem } = useStaff()
     const [activeTab, setActiveTab] = useState('all')
     const [search, setSearch] = useState('')
     const [mandatoryOnly, setMandatoryOnly] = useState(false)
     const [expandedId, setExpandedId] = useState<string | null>(null)
     const [quizState, setQuizState] = useState<Quiz[]>(seedQuizzes.map(q => ({ ...q })))
     const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null)
+    const [addModuleOpen, setAddModuleOpen] = useState(false)
 
     /* Stats */
     const avgProgress = Math.round(learningContent.reduce((acc, lc) => acc + (lc.progress || 0), 0) / learningContent.length)
@@ -212,6 +215,7 @@ export default function Learning() {
     return (
         <>
             {activeQuiz && <QuizModal quiz={activeQuiz} onClose={closeQuiz} />}
+            {addModuleOpen && <AddModuleModal onClose={() => setAddModuleOpen(false)} onAdd={addLearningItem} />}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32, maxWidth: 1400 }}>
 
                 {/* Header */}
@@ -219,6 +223,7 @@ export default function Learning() {
                     <p style={{ fontSize: 15, color: '#64748B' }}>
                         {learningContent.length} courses · {mandatoryComplete}/{mandatory.length} mandatory complete
                     </p>
+                    <button onClick={() => setAddModuleOpen(true)} className="btn btn-amber"><Plus style={{ width: 16, height: 16 }} />Add Module</button>
                 </div>
 
                 {/* Stats cards */}
@@ -405,5 +410,86 @@ export default function Learning() {
                 )}
             </div>
         </>
+    )
+}
+
+
+/* ═══ Add Module Modal ═══ */
+function AddModuleModal({ onClose, onAdd }: {
+    onClose: () => void
+    onAdd: (item: Omit<LearningContent, 'id'>) => void
+}) {
+    const [title, setTitle] = useState('')
+    const [description, setDescription] = useState('')
+    const [type, setType] = useState<LearningContent['type']>('document')
+    const [category, setCategory] = useState('Safety')
+    const [duration, setDuration] = useState('')
+    const [timeSeq, setTimeSeq] = useState('Week 1')
+    const [mandatory, setMandatory] = useState(false)
+
+    const handleSubmit = () => {
+        if (!title.trim()) return
+        onAdd({
+            title: title.trim(), description: description.trim(), type, category,
+            mandatory, roles: ['all'], timeSequence: timeSeq,
+            isDevelopmentSignal: category === 'Development',
+            duration: duration || '30 min', progress: 0,
+        })
+        onClose()
+    }
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+            <div className="animate-pop" onClick={e => e.stopPropagation()} style={{ width: 520, background: 'white', borderRadius: 24, boxShadow: '0 25px 60px -12px rgb(15 23 42 / 0.15)', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px', borderBottom: '1px solid #F1F5F9' }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A' }}>Add Learning Module</h3>
+                    <button onClick={onClose} style={{ padding: 6, borderRadius: 10, border: 'none', background: 'transparent', cursor: 'pointer' }}><X style={{ width: 18, height: 18, color: '#94A3B8' }} /></button>
+                </div>
+                <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    <div>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6, display: 'block' }}>Title *</label>
+                        <input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Chemical Safety — HSNO" />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6, display: 'block' }}>Description</label>
+                        <textarea className="input" value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Brief description..." style={{ resize: 'vertical' as const }} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                        <div>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6, display: 'block' }}>Type</label>
+                            <select className="input" value={type} onChange={e => setType(e.target.value as any)} style={{ cursor: 'pointer' }}>
+                                <option value="video">Video</option><option value="document">Document</option><option value="sop">SOP</option><option value="interactive">Interactive</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6, display: 'block' }}>Category</label>
+                            <select className="input" value={category} onChange={e => setCategory(e.target.value)} style={{ cursor: 'pointer' }}>
+                                <option>Safety</option><option>Compliance</option><option>Operations</option><option>Development</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                        <div>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6, display: 'block' }}>Duration</label>
+                            <input className="input" value={duration} onChange={e => setDuration(e.target.value)} placeholder="e.g. 45 min" />
+                        </div>
+                        <div>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6, display: 'block' }}>Time Sequence</label>
+                            <select className="input" value={timeSeq} onChange={e => setTimeSeq(e.target.value)} style={{ cursor: 'pointer' }}>
+                                <option>Pre-start</option><option>Day 1</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Optional</option>
+                            </select>
+                        </div>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={mandatory} onChange={e => setMandatory(e.target.checked)} style={{ accentColor: '#F59E0B' }} />
+                        <span style={{ fontSize: 13, color: '#475569' }}>Mandatory for assigned roles</span>
+                    </label>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, padding: '16px 28px', borderTop: '1px solid #F1F5F9' }}>
+                    <button onClick={onClose} className="btn btn-outline" style={{ padding: '10px 20px' }}>Cancel</button>
+                    <button onClick={handleSubmit} className="btn btn-amber" style={{ padding: '10px 24px' }}>Add Module</button>
+                </div>
+            </div>
+        </div>
     )
 }

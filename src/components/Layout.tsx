@@ -1,5 +1,5 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, FileText, ShieldAlert, MapPin, ClipboardList, ClipboardCheck, BookOpen, Megaphone, DollarSign, Shield, Egg, Bell, ChevronLeft, ChevronDown, Settings, LogOut, User, X, Clock } from 'lucide-react'
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { LayoutDashboard, Users, FileText, ShieldAlert, MapPin, ClipboardList, ClipboardCheck, BookOpen, Megaphone, DollarSign, Shield, Egg, Bell, ChevronLeft, ChevronDown, Settings, LogOut, User, X, Clock, Monitor, Lightbulb } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
 const nav = [
@@ -10,6 +10,7 @@ const nav = [
     { name: 'Learning', href: '/learning', icon: BookOpen },
     { name: 'Checklists', href: '/checklists', icon: ClipboardCheck },
     { name: 'Health & Safety', href: '/health-safety', icon: ShieldAlert },
+    { name: 'Improvements', href: '/improvements', icon: Lightbulb },
     { name: 'Communications', href: '/communications', icon: Megaphone },
     { name: 'Time & Attendance', href: '/site-sign-in', icon: Clock },
     { name: 'Budgets', href: '/budgets', icon: DollarSign },
@@ -27,6 +28,7 @@ const dotClr = { orange: 'bg-orange-500', red: 'bg-red-500', emerald: 'bg-emeral
 
 export default function Layout() {
     const location = useLocation()
+    const navigate = useNavigate()
     const [collapsed, setCollapsed] = useState(false)
     const [notifOpen, setNotifOpen] = useState(false)
     const [profileOpen, setProfileOpen] = useState(false)
@@ -51,9 +53,7 @@ export default function Layout() {
             <aside className={`${collapsed ? 'w-20' : 'w-64'} flex flex-col bg-white transition-all duration-300 flex-shrink-0`} style={{ borderRight: '1px solid #E2E8F0' }}>
                 {/* Logo */}
                 <div className="flex items-center gap-4 h-24" style={{ padding: '0 28px', borderBottom: '1px solid #F1F5F9' }}>
-                    <div className="w-11 h-11 flex items-center justify-center flex-shrink-0" style={{ borderRadius: 16, background: 'linear-gradient(135deg, #FBBF24, #D97706)' }}>
-                        <Egg className="w-5 h-5 text-white" />
-                    </div>
+                    <img src="/better-eggs-logo-sm.png" alt="Better Eggs" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
                     {!collapsed && <p style={{ fontSize: 16, fontWeight: 700, color: '#0F172A' }}>Better Eggs</p>}
                 </div>
 
@@ -99,6 +99,19 @@ export default function Layout() {
                             </div>
                         </div>
                     )}
+                    <button
+                        onClick={() => navigate('/employee')}
+                        title={collapsed ? 'Employee View' : undefined}
+                        style={{
+                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
+                            gap: 10, padding: collapsed ? '12px' : '12px 16px', borderRadius: 16, marginBottom: 8,
+                            color: '#D97706', background: '#FFFBEB', border: '1px solid #FDE68A',
+                            cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.2s',
+                        }}
+                    >
+                        <Monitor style={{ width: 16, height: 16, flexShrink: 0 }} />
+                        {!collapsed && <span>Employee View</span>}
+                    </button>
                     <button onClick={() => setCollapsed(!collapsed)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px', borderRadius: 16, color: '#94A3B8', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, transition: 'all 0.2s' }}>
                         <ChevronLeft style={{ width: 16, height: 16, transition: 'transform 0.3s', transform: collapsed ? 'rotate(180deg)' : 'none' }} />
                         {!collapsed && <span>Collapse</span>}

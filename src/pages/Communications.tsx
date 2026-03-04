@@ -2,7 +2,8 @@ import { useState } from 'react'
 import {
     Megaphone, Calendar, Star, Search, Clock, MapPin, User,
     ChevronDown, ChevronUp, Paperclip, Plus, X, Heart,
-    Trophy, Sparkles, Eye, MessageSquare, Users, Zap,
+    Trophy, Sparkles, Eye, MessageSquare, Users, Zap, Cake, CalendarHeart,
+    Grid2x2, List, Send, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { announcements as seedAnn, calendarEvents, recognitions, type Announcement, type CalendarEvent, type Recognition } from '../data/mockData'
 
@@ -105,21 +106,32 @@ const recTypeCfg: Record<Recognition['type'], { bg: string; tx: string; label: s
     behavioural: { bg: '#F0FDF4', tx: '#059669', label: 'Behavioural', icon: Zap },
     'shout-out': { bg: '#EFF6FF', tx: '#2563EB', label: 'Shout-out', icon: Megaphone },
     'high-performance': { bg: '#FDF4FF', tx: '#9333EA', label: 'High Performance', icon: Trophy },
+    'birthday': { bg: '#FFF1F2', tx: '#EC4899', label: 'Birthday', icon: Cake },
+    'work-anniversary': { bg: '#ECFDF5', tx: '#059669', label: 'Work Anniversary', icon: CalendarHeart },
 }
 
 type TabView = 'announcements' | 'calendar' | 'recognition'
 
 export default function Communications() {
     const [annList, setAnnList] = useState<Announcement[]>([...seedAnn])
+    const [recList, setRecList] = useState<Recognition[]>([...recognitions])
     const [tab, setTab] = useState<TabView>('announcements')
     const [search, setSearch] = useState('')
     const [expandedId, setExpandedId] = useState<string | null>(null)
     const [calCat, setCalCat] = useState<CalendarEvent['category'] | ''>('')
     const [showAdd, setShowAdd] = useState(false)
+    const [calView, setCalView] = useState<'list' | 'grid'>('list')
+    const [showRec, setShowRec] = useState(false)
+    const [calMonth, setCalMonth] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1) })
 
     const handleAddAnn = (a: Announcement) => {
         setAnnList(prev => [a, ...prev])
         setShowAdd(false)
+    }
+
+    const handleAddRec = (r: Omit<Recognition, 'id'>) => {
+        setRecList(prev => [{ ...r, id: `r-${Date.now()}` }, ...prev])
+        setShowRec(false)
     }
 
     /* Filtered data */
@@ -138,15 +150,27 @@ export default function Communications() {
         return true
     }).sort((a, b) => a.date.localeCompare(b.date))
 
-    const filteredRec = recognitions.filter(r => {
+    const filteredRec = recList.filter(r => {
         if (!search) return true
         const q = search.toLowerCase()
         return r.to.toLowerCase().includes(q) || r.from.toLowerCase().includes(q) || r.message.toLowerCase().includes(q)
     })
 
+    /* Calendar grid helpers */
+    const year = calMonth.getFullYear()
+    const month = calMonth.getMonth()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const firstDow = (new Date(year, month, 1).getDay() + 6) % 7 // Mon=0
+    const today = new Date()
+    const calGridEvents = calendarEvents.filter(e => {
+        const d = new Date(e.date + 'T00:00:00')
+        return d.getFullYear() === year && d.getMonth() === month
+    })
+
     return (
         <>
             {showAdd && <NewAnnouncementModal onClose={() => setShowAdd(false)} onSubmit={handleAddAnn} />}
+            {showRec && <GiveRecognitionModal onClose={() => setShowRec(false)} onSubmit={handleAddRec} />}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32, maxWidth: 1400 }}>
                 {/* Header */}
                 <div className="animate-in" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -250,54 +274,95 @@ export default function Communications() {
                             </div>
                             <select value={calCat} onChange={e => setCalCat(e.target.value as any)} className="input" style={{ minWidth: 160, appearance: 'auto' }}>
                                 <option value="">All categories</option>
-                                <option value="company">Company</option>
-                                <option value="site">Site</option>
-                                <option value="training">Training</option>
-                                <option value="social">Social</option>
-                                <option value="operational">Operational</option>
-                                <option value="one-on-one">1:1</option>
+                                <option value="company">Company</option><option value="site">Site</option>
+                                <option value="training">Training</option><option value="social">Social</option>
+                                <option value="operational">Operational</option><option value="one-on-one">1:1</option>
                             </select>
+                            {/* View toggle */}
+                            <div style={{ display: 'flex', background: 'white', borderRadius: 14, padding: 4, boxShadow: '0 1px 3px rgba(15,23,42,0.06)' }}>
+                                {([{ key: 'list' as const, icon: List, label: 'List' }, { key: 'grid' as const, icon: Grid2x2, label: 'Calendar' }]).map(v => (
+                                    <button key={v.key} onClick={() => setCalView(v.key)} style={{
+                                        display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: 'none',
+                                        fontSize: 12, fontWeight: calView === v.key ? 600 : 500, cursor: 'pointer',
+                                        background: calView === v.key ? '#FFFBEB' : 'transparent', color: calView === v.key ? '#B45309' : '#94A3B8',
+                                        transition: 'all 0.2s',
+                                    }}><v.icon style={{ width: 14, height: 14 }} />{v.label}</button>
+                                ))}
+                            </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {filteredCal.map((ev, i) => {
-                                const cc = catCfg[ev.category]
-                                return (
-                                    <div key={ev.id} className={`card animate-in delay-${Math.min(i + 1, 4)}`} style={{ padding: '24px 28px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                                            {/* Date block */}
-                                            <div style={{ width: 60, height: 64, borderRadius: 16, background: '#F8FAFC', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #F1F5F9' }}>
-                                                <p style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>{new Date(ev.date + 'T00:00:00').toLocaleDateString('en-NZ', { month: 'short' })}</p>
-                                                <p style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>{new Date(ev.date + 'T00:00:00').getDate()}</p>
-                                            </div>
-
-                                            {/* Event info */}
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                    <p style={{ fontSize: 15, fontWeight: 600, color: '#1E293B' }}>{ev.title}</p>
-                                                    <span style={{ padding: '2px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: cc.bg, color: cc.tx }}>{cc.emoji} {cc.label}</span>
+                        {calView === 'list' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {filteredCal.map((ev, i) => {
+                                    const cc = catCfg[ev.category]
+                                    return (
+                                        <div key={ev.id} className={`card animate-in delay-${Math.min(i + 1, 4)}`} style={{ padding: '24px 28px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                                <div style={{ width: 60, height: 64, borderRadius: 16, background: '#F8FAFC', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #F1F5F9' }}>
+                                                    <p style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>{new Date(ev.date + 'T00:00:00').toLocaleDateString('en-NZ', { month: 'short' })}</p>
+                                                    <p style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>{new Date(ev.date + 'T00:00:00').getDate()}</p>
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 6 }}>
-                                                    <span style={{ fontSize: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4 }}><Clock style={{ width: 11, height: 11 }} />{ev.time}{ev.endTime ? ` – ${ev.endTime}` : ''}</span>
-                                                    <span style={{ fontSize: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4 }}><Users style={{ width: 11, height: 11 }} />{ev.target}</span>
-                                                    {ev.site && <span style={{ fontSize: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4 }}><MapPin style={{ width: 11, height: 11 }} />{ev.site}</span>}
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                        <p style={{ fontSize: 15, fontWeight: 600, color: '#1E293B' }}>{ev.title}</p>
+                                                        <span style={{ padding: '2px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: cc.bg, color: cc.tx }}>{cc.emoji} {cc.label}</span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 6 }}>
+                                                        <span style={{ fontSize: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4 }}><Clock style={{ width: 11, height: 11 }} />{ev.time}{ev.endTime ? ` – ${ev.endTime}` : ''}</span>
+                                                        <span style={{ fontSize: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4 }}><Users style={{ width: 11, height: 11 }} />{ev.target}</span>
+                                                        {ev.site && <span style={{ fontSize: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4 }}><MapPin style={{ width: 11, height: 11 }} />{ev.site}</span>}
+                                                    </div>
+                                                    {ev.description && <p style={{ fontSize: 13, color: '#64748B', marginTop: 8, lineHeight: 1.5 }}>{ev.description}</p>}
                                                 </div>
-                                                {ev.description && <p style={{ fontSize: 13, color: '#64748B', marginTop: 8, lineHeight: 1.5 }}>{ev.description}</p>}
                                             </div>
                                         </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
+                                    )
+                                })}
+                            </div>
+                        ) : (
+                            /* Grid calendar view */
+                            <div className="card animate-in" style={{ padding: 28 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                                    <button onClick={() => setCalMonth(new Date(year, month - 1, 1))} style={{ padding: 8, border: 'none', background: 'transparent', cursor: 'pointer' }}><ChevronLeft style={{ width: 18, height: 18, color: '#64748B' }} /></button>
+                                    <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A' }}>{calMonth.toLocaleDateString('en-NZ', { month: 'long', year: 'numeric' })}</h3>
+                                    <button onClick={() => setCalMonth(new Date(year, month + 1, 1))} style={{ padding: 8, border: 'none', background: 'transparent', cursor: 'pointer' }}><ChevronRight style={{ width: 18, height: 18, color: '#64748B' }} /></button>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, background: '#F1F5F9', borderRadius: 16, overflow: 'hidden' }}>
+                                    {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map(d => (
+                                        <div key={d} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94A3B8', background: '#FAFAFA' }}>{d}</div>
+                                    ))}
+                                    {Array.from({ length: firstDow }).map((_, i) => <div key={`e-${i}`} style={{ minHeight: 80, background: '#FAFAFA' }} />)}
+                                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                                        const day = i + 1
+                                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                                        const dayEvents = calGridEvents.filter(e => e.date === dateStr)
+                                        const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
+                                        return (
+                                            <div key={day} style={{ minHeight: 80, padding: 8, background: isToday ? '#FFFBEB' : 'white', border: isToday ? '2px solid #D97706' : 'none' }}>
+                                                <p style={{ fontSize: 12, fontWeight: isToday ? 700 : 500, color: isToday ? '#D97706' : '#64748B', marginBottom: 4 }}>{day}</p>
+                                                {dayEvents.slice(0, 2).map(ev => {
+                                                    const cc = catCfg[ev.category]
+                                                    return <p key={ev.id} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 6, background: cc.bg, color: cc.tx, fontWeight: 600, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title}</p>
+                                                })}
+                                                {dayEvents.length > 2 && <p style={{ fontSize: 10, color: '#94A3B8' }}>+{dayEvents.length - 2} more</p>}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </>
                 )}
 
                 {/* ─── RECOGNITION TAB ─── */}
                 {tab === 'recognition' && (
                     <>
-                        <div className="animate-in" style={{ position: 'relative' }}>
-                            <Search style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#94A3B8' }} />
-                            <input type="text" placeholder="Search recognitions..." className="input" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 44 }} />
+                        <div className="animate-in" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                            <div style={{ flex: 1, position: 'relative' }}>
+                                <Search style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#94A3B8' }} />
+                                <input type="text" placeholder="Search recognitions..." className="input" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 44 }} />
+                            </div>
+                            <button onClick={() => setShowRec(true)} className="btn btn-amber"><Plus style={{ width: 16, height: 16 }} />Give Recognition</button>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -338,5 +403,111 @@ export default function Communications() {
                 )}
             </div>
         </>
+    )
+}
+
+
+/* ═══ Give Recognition Modal ═══ */
+function GiveRecognitionModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (r: Omit<Recognition, 'id'>) => void }) {
+    const recTypes: { key: Recognition['type']; label: string }[] = [
+        { key: 'values', label: 'Values-based' },
+        { key: 'behavioural', label: 'Behavioural' },
+        { key: 'shout-out', label: 'General Shout-out' },
+        { key: 'high-performance', label: 'High Performance' },
+    ]
+    const visOpts: { key: Recognition['visibility']; label: string }[] = [
+        { key: 'company', label: 'Company-wide' },
+        { key: 'site', label: 'Site-wide' },
+        { key: 'team', label: 'Team' },
+        { key: 'private', label: 'Private (recipient only)' },
+    ]
+
+    const [to, setTo] = useState('')
+    const [type, setType] = useState<Recognition['type']>('shout-out')
+    const [visibility, setVisibility] = useState<Recognition['visibility']>('company')
+    const [message, setMessage] = useState('')
+    const [value, setValue] = useState('')
+
+    const canSubmit = to.trim().length > 0 && message.trim().length > 0
+
+    const handleSubmit = () => {
+        if (!canSubmit) return
+        onSubmit({
+            from: 'Luke Benefield',
+            to: to.trim(),
+            type,
+            message: message.trim(),
+            date: new Date().toISOString().slice(0, 10),
+            visibility,
+            ...(type === 'values' && value ? { value } : {}),
+        })
+    }
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
+            <div className="animate-pop" style={{ position: 'relative', width: 560, background: 'white', borderRadius: 28, padding: 40, boxShadow: '0 24px 48px -12px rgba(15,23,42,0.15)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+                    <div>
+                        <h3 style={{ fontSize: 20, fontWeight: 700, color: '#0F172A' }}>Give Recognition</h3>
+                        <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>Recognise a colleague for great work</p>
+                    </div>
+                    <button onClick={onClose} style={{ padding: 6, borderRadius: 12, border: 'none', background: 'transparent', cursor: 'pointer' }}><X style={{ width: 18, height: 18, color: '#94A3B8' }} /></button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6, textTransform: 'uppercase' as any, letterSpacing: '0.05em' }}>To *</label>
+                        <input className="input" placeholder="e.g. Tom Henderson" value={to} onChange={e => setTo(e.target.value)} />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div>
+                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 8, textTransform: 'uppercase' as any, letterSpacing: '0.05em' }}>Type</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {recTypes.map(t => (
+                                    <button key={t.key} onClick={() => setType(t.key)} style={{
+                                        padding: '10px 14px', borderRadius: 12, border: 'none', fontSize: 12, fontWeight: 600,
+                                        background: type === t.key ? '#FFFBEB' : '#F8FAFC', color: type === t.key ? '#B45309' : '#94A3B8',
+                                        boxShadow: type === t.key ? '0 0 0 2px #D97706' : 'none', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' as any,
+                                    }}>{t.label}</button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 8, textTransform: 'uppercase' as any, letterSpacing: '0.05em' }}>Visibility</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {visOpts.map(v => (
+                                    <button key={v.key} onClick={() => setVisibility(v.key)} style={{
+                                        padding: '10px 14px', borderRadius: 12, border: 'none', fontSize: 12, fontWeight: 600,
+                                        background: visibility === v.key ? '#EFF6FF' : '#F8FAFC', color: visibility === v.key ? '#2563EB' : '#94A3B8',
+                                        boxShadow: visibility === v.key ? '0 0 0 2px #3B82F6' : 'none', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' as any,
+                                    }}>{v.label}</button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {type === 'values' && (
+                        <div>
+                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6, textTransform: 'uppercase' as any, letterSpacing: '0.05em' }}>Company Value</label>
+                            <input className="input" placeholder="e.g. Kaitiakitanga" value={value} onChange={e => setValue(e.target.value)} />
+                        </div>
+                    )}
+
+                    <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6, textTransform: 'uppercase' as any, letterSpacing: '0.05em' }}>Message *</label>
+                        <textarea className="input" rows={3} placeholder="What did they do that was awesome?" value={message} onChange={e => setMessage(e.target.value)} style={{ resize: 'vertical' }} />
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 28 }}>
+                    <button onClick={onClose} className="btn btn-outline">Cancel</button>
+                    <button onClick={handleSubmit} className="btn btn-amber" disabled={!canSubmit} style={{ opacity: canSubmit ? 1 : 0.5 }}>
+                        <Heart style={{ width: 14, height: 14 }} />Send Recognition
+                    </button>
+                </div>
+            </div>
+        </div>
     )
 }
